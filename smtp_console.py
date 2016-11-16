@@ -1,5 +1,6 @@
 import logging
 
+from getpass import getpass
 from smtp import SMTP, SMTP_SERVERS
 
 
@@ -28,12 +29,17 @@ def run_smtp():
 
     smtp = SMTP(SMTP_SERVERS[smtp_server])
     smtp.auth(fromaddr, password)
-    smtp.sendmail(fromaddr, toaddrs.split(' '), msg)
+    recverr = smtp.sendmail(fromaddr, toaddrs.split(' '), msg)
+    for recv, err in recverr.items():
+        print(recv)
+        print(err, end='\n')
+    print('[+] Message were sended')
 
 
 def main():
     setup_logging()
     run_smtp()
+
 
 if __name__ == '__main__':
     main()

@@ -1,12 +1,10 @@
 import socket
+import copy
 import ssl
 import sys
 import base64
 import six
 import logging
-
-from getpass import getpass
-
 
 
 BUFFER_SIZE = 1024
@@ -41,8 +39,8 @@ def send_function(sender):
 def auth_function(auth):
     def wrapper(self, username, password):
         code, reply = auth(self, username, password)
-        if code != 334:
-            raise SMTPAuthenticationError(code, reply)
+        # if code != 334:
+        #     raise SMTPAuthenticationError(code, reply)
         return (code, reply)
     return wrapper
 
@@ -121,7 +119,6 @@ class SMTP:
         code, reply = self.execute('AUTH PLAIN')
         if code != 334:
             return (code, reply)
-
         return self.execute(self.base64encode('\0%s\0%s' % (username,
                                                             password)))
 
@@ -164,19 +161,25 @@ class SMTP:
         logger.info('\n[+] Login successful\n' + '=' * 30 + '\n')
         return (code, reply)
 
-    def sendmail(self, sender, receivers, mail):
-        def check_code(code, reply):
-            if code != 250:
-                raise SMTPMailTransactionError(code, reply)
-
-
+    def mail(self, sender):
         code, reply = self.execute('MAIL FROM:<{}>'.format(sender))
-        check_code(code, reply)
+        if code != 250:
+            raise SMTPMailTransactionError(code, reply)
+        return (code, reply)
+
+    def rcpt(self, recv):
+        return self.execute('RCPT TO:<{}>'.format(recv))
+
+    def sendmail(self, sender, receivers, mail):
+        self.mail(sender)
+        recverr = {}
 
         for receiver in receivers:
-            self.execute('RCPT TO:<{}>'.format(receiver))
+            code, reply = self.rcpt(receiver)
+            if code not in [250, 251]:
+                recverr[receiver] = (code, reply)        
         self.execute_commands('DATA', (mail, True), '.', quit)
-        return True
+        return recverr
 
     def quit(self):
         self.execute('QUIT')
