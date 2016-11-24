@@ -6,6 +6,8 @@ import base64
 import six
 import logging
 
+from functools import wraps
+
 
 BUFFER_SIZE = 1024
 logger = logging.getLogger(__name__)
@@ -31,12 +33,14 @@ class SMTPAuthenticationError(SMTPException):
 
 
 def send_function(sender):
+    @wraps(sender)
     def wrapper(self, data):
         sender(self, data + b'\r\n')
     return wrapper
 
 
 def auth_function(auth):
+    @wraps(auth)
     def wrapper(self, username, password):
         code, reply = auth(self, username, password)
         # if code != 334:
@@ -46,12 +50,12 @@ def auth_function(auth):
 
 
 class SMTP:
-    def __init__(self, smtp_server):
+    def __init__(self, smtp_server, enc):
         self.smtp_server = smtp_server
         self.encoding = 'ascii'
         self.auths = []
 
-        self.init_socket()
+        self.init_socket(enc)
         self.ehlo()
 
     def ehlo(self):
@@ -70,12 +74,25 @@ class SMTP:
         for setting in line.split()[1:]:
             self.auths.append(setting)
 
-    def init_socket(self):
-        raw_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket = ssl.wrap_socket(raw_socket,
-                                      ssl_version=ssl.PROTOCOL_SSLv23)
-        self.socket.connect((self.smtp_server))
-        resp = self.socket.recv(BUFFER_SIZE)
+    def init_socket(self, dis_enc=False):
+        def wrap_socket(socket):
+            return ssl.wrap_socket(socket, ssl_version=ssl.PROTOCOL_SSLv23)
+
+        def conn_and_resp(socket):
+            socket.connect((self.smtp_server))
+            socket.recv(BUFFER_SIZE)
+
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.settimeout(2)
+        if not dis_enc:
+            self.socket = wrap_socket(self.socket)
+        try:
+            conn_and_resp(self.socket)
+        except socket.timeout:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket = wrap_socket(self.socket)
+            conn_and_resp(self.socket)
+
 
     @send_function
     def send_data(self, data):
@@ -83,9 +100,12 @@ class SMTP:
 
     def recv_data(self):
         data = self.socket.recv(BUFFER_SIZE).decode(self.encoding)
-        code = int(data[:3])
-        reply = data[3:]
-        return (code, reply)
+        # print(data)
+        try:
+            code, reply = data.replace('-', ' ').split(' ', maxsplit=1)
+        except ValueError:
+            code, reply = data, ''
+        return (int(code), reply)
 
     def is_bytes(self, data):
         try:
@@ -168,7 +188,10 @@ class SMTP:
         return (code, reply)
 
     def rcpt(self, recv):
-        return self.execute('RCPT TO:<{}>'.format(recv))
+        code, reply = self.execute('RCPT TO:<{}>'.format(recv))
+        if code not in [250, 251]:
+            print(code, reply)
+        return (code, reply)
 
     def sendmail(self, sender, receivers, mail):
         self.mail(sender)
@@ -177,7 +200,7 @@ class SMTP:
         for receiver in receivers:
             code, reply = self.rcpt(receiver)
             if code not in [250, 251]:
-                recverr[receiver] = (code, reply)        
+                recverr[receiver] = (code, reply)
         self.execute_commands('DATA', (mail, True), '.', quit)
         return recverr
 
