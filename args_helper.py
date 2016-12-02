@@ -1,6 +1,9 @@
 from smtp import SMTP_SERVERS
+from getpass import getpass
 
 import argparse
+import sys
+import re
 
 
 class Args_Helper:
@@ -8,8 +11,10 @@ class Args_Helper:
         self.parser = argparse.ArgumentParser()
         self.parser.add_argument('--fromaddr', action='store', type=str,
                             help='From address')
-        self.parser.add_argument('--toaddrs', action='store', type=str,
+        self.parser.add_argument('--toaddrs', nargs='*',
                             help='To addresses')
+        self.parser.add_argument('--subj', action='store', type=str,
+                                 help='Subject of the message')
         self.parser.add_argument('--server', action='store', type=str,
                             help='SMTP server')
         self.parser.add_argument('--passwd', action='store', type=str,
@@ -18,35 +23,61 @@ class Args_Helper:
                             help='Message for recipients')
         self.parser.add_argument('--dis-enc', action='store_true',
                             help='Disables encryption')
+        self.parser.add_argument('--attach', nargs='*',
+                                 help='Attachments for email')
+        self.parser.add_argument('--archive', action='store_true',
+                                 help='Archives all attachments')
 
     def get_params(self):
         args = self.parser.parse_args()
-
         if not args.server:
             smtp_server = input('Choose smtp server, %s: ' % \
                                 [s for s in SMTP_SERVERS.keys()])
         else:
             smtp_server = args.server
-
         fromaddr = input('From: ') if not args.fromaddr else args.fromaddr
         password = getpass('Your password: ') if not args.passwd else args.passwd
+        toaddrs = input('To: ') if not args.toaddrs else args.toaddrs
+        subject = input('Subject: ') if not args.subj else args.subj
 
         username = fromaddr
-
-        toaddrs = input('To: ') if not args.toaddrs else args.toaddrs
-
         msg = args.msg
 
         if not msg:
+            msg = ''
             print('Enter message: (end with ^D)')
             for line in sys.stdin:
                 msg += line
-
-        return {
+        mode_data = self.enter_mode(toaddrs)
+        return (mode_data, {
             'fromaddr': fromaddr,
             'password': password,
             'toaddrs': toaddrs,
             'smtp_server': smtp_server,
-            'msg': msg,
-            'dis_enc': args.dis_enc
-        }
+            'dis_enc': args.dis_enc,
+            'data': { 'msg': msg, 'subject': subject, 'attachs': args.attach },
+            'archive': args.archive
+        })
+
+    def enter_mode(self, toaddrs):
+        print('Input distribution mode:')
+        print('1: Message are sended to all recipients seperately')
+        print('2: One message for all recipients')
+        print('3: Custom mode. Enter groups of distribution')
+        mode = int(input('Enter mode: '))
+
+        if mode == 3:
+            import re
+
+            reg = re.compile(r'\([\d+\ +]+\)')
+            distr_list = input('Enter distribution list: ')
+            distr_list = reg.findall(distr_list)
+            or_distr = []
+            for distr in distr_list:
+                distr = list(filter(None, distr[1:-1].split(' ')))
+                email_distr = []
+                for num in distr:
+                    email_distr.append(toaddrs[int(num) - 1])
+                or_distr.append(email_distr)
+            return (mode, or_distr)
+        return (mode,)

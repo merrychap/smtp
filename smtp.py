@@ -83,7 +83,7 @@ class SMTP:
             socket.recv(BUFFER_SIZE)
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.settimeout(2)
+        self.socket.settimeout(3)
         if not dis_enc:
             self.socket = wrap_socket(self.socket)
         try:
@@ -201,9 +201,9 @@ class SMTP:
             code, reply = self.rcpt(receiver)
             if code not in [250, 251]:
                 recverr[receiver] = (code, reply)
-        self.execute_commands('DATA', (mail, True), '.', quit)
+        self.execute_commands('DATA', (mail, True), '.')
         return recverr
 
-    def quit(self):
+    def close(self):
         self.execute('QUIT')
         self.socket.close()
