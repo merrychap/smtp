@@ -25,9 +25,9 @@ def run_smtp(mode_data, smtp_server, dis_enc, fromaddr, password, toaddrs,
     smtp = SMTP(SMTP_SERVERS[smtp_server], dis_enc)
     smtp.auth(fromaddr, password)
     send_by_mode(mode_data, smtp, fromaddr, toaddrs, data)
-    print('[*] Message were sended')
+    print('[+] Message were sended')
     smtp.close()
-    print('[*] Done')
+    print('[+] Done')
 
 
 def send_by_mode(mode_data, smtp, fromaddr, toaddrs, data):
@@ -44,7 +44,7 @@ def send_by_mode(mode_data, smtp, fromaddr, toaddrs, data):
 
 def send_email(smtp, fromaddr, toaddrs, subject, msg, attachs):
     str_toaddrs = addrs2str(toaddrs)
-    print('[*] Preparing the email for %s' % str_toaddrs.replace(',', ' '))
+    print('[*] Preparing the email for %s' % str_toaddrs.replace(',', ', '))
     email = Email(fromaddr=fromaddr, toaddr=str_toaddrs,
                   subject=subject, message=msg, attachments=attachs)
     print('[*] Sending...')
@@ -60,7 +60,7 @@ def addrs2str(addrs):
 def attach2archive(attachs):
     zf = zipfile.ZipFile(ATTACH_ARCHIVE, mode='w')
     try:
-        print('[*] Attachments is converted to zip archive')
+        print('[+] Attachments is converted to zip archive')
         for attach in attachs:
             zf.write(get_alias(attach)[0])
     finally:

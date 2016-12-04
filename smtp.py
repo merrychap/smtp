@@ -12,7 +12,9 @@ from functools import wraps
 BUFFER_SIZE = 1024
 logger = logging.getLogger(__name__)
 SMTP_SERVERS = {
-    'google': ('smtp.gmail.com', 465)
+    'google': ('smtp.gmail.com', 465),
+    'yandex': ('smtp.yandex.ru', 465),
+    'mail.ru': ('smtp.mail.ru', 465)
 }
 
 
