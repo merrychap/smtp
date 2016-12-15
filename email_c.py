@@ -16,8 +16,9 @@ def get_alias(filename):
 
 
 class Email:
-    def __init__(self, fromaddr, toaddr, subject, message, message_type='plain',
-                 attachments=None, cc=None,message_encoding='utf-8'):
+    def __init__(self, fromaddr, toaddr, subject, message,
+                 message_type='plain', attachments=None, cc=None,
+                 message_encoding='utf-8'):
         self.email = MIMEMultipart()
         self.email['From'] = fromaddr
         self.email['To'] = toaddr

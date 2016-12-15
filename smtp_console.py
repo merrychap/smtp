@@ -65,6 +65,7 @@ def addrs2str(addrs):
         addrs_str += addr + ','
     return addrs_str[:-1]
 
+
 def attach2archive(attachs):
     zf = zipfile.ZipFile(ATTACH_ARCHIVE, mode='w')
     try:

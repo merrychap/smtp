@@ -33,12 +33,13 @@ class Args_Helper:
     def get_params(self):
         args = self.parser.parse_args()
         if not args.server:
-            smtp_server = input('Choose smtp server, %s: ' % \
+            smtp_server = input('Choose smtp server, %s: ' %
                                 list(SMTP_SERVERS.keys()))
         else:
             smtp_server = args.server
         fromaddr = input('From: ') if not args.fromaddr else args.fromaddr
-        password = getpass('Your password: ') if not args.passwd else args.passwd
+        password = getpass('Your password: ') if not args.passwd \
+                                              else args.passwd
         toaddrs = input('To: ') if not args.toaddrs else args.toaddrs
         subject = input('Subject: ') if not args.subj else args.subj
 
@@ -57,7 +58,8 @@ class Args_Helper:
                 mode_data = self.enter_groups_distr_mode(toaddrs)
         else:
             mode_data = self.enter_mode(toaddrs)
-            mode = mode_data if not isinstance(mode_data, tuple) else mode_data[0]
+            mode = mode_data if not isinstance(mode_data, tuple) \
+                             else mode_data[0]
         if mode not in [1, 2, 3]:
             print('[-] Error occured')
             sys.exit()
@@ -67,7 +69,7 @@ class Args_Helper:
             'toaddrs': toaddrs,
             'smtp_server': smtp_server,
             'dis_enc': args.dis_enc,
-            'data': { 'msg': msg, 'subject': subject, 'attachs': args.attach },
+            'data': {'msg': msg, 'subject': subject, 'attachs': args.attach},
             'archive': args.archive
         })
 

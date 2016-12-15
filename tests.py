@@ -103,7 +103,6 @@ class TestSMTP(unittest.TestCase):
         smtp = create_smtp()
         self.assertEqual(smtp.mail(self.sender), success_msg)
 
-    
 
 def main():
     unittest.main()
