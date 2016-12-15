@@ -45,8 +45,6 @@ def auth_function(auth):
     @wraps(auth)
     def wrapper(self, username, password):
         code, reply = auth(self, username, password)
-        # if code != 334:
-        #     raise SMTPAuthenticationError(code, reply)
         return (code, reply)
     return wrapper
 
@@ -58,7 +56,6 @@ class SMTP:
         self.auths = []
 
         self.init_socket(enc)
-        self.ehlo()
 
     def ehlo(self):
         code, reply = self.execute('EHLO a')
@@ -95,14 +92,12 @@ class SMTP:
             self.socket = wrap_socket(self.socket)
             conn_and_resp(self.socket)
 
-
     @send_function
     def send_data(self, data):
         self.socket.send(data)
 
     def recv_data(self):
         data = self.socket.recv(BUFFER_SIZE).decode(self.encoding)
-        # print(data)
         try:
             code, reply = data.replace('-', ' ').split(' ', maxsplit=1)
         except ValueError:
@@ -130,8 +125,10 @@ class SMTP:
             if callable(command):
                 command()
             else:
-                self.execute(command) if isinstance(command, six.string_types) \
-                else self.execute(*command)
+                if isinstance(command, six.string_types):
+                    self.execute(command)
+                else:
+                    self.execute(*command)
 
     def base64encode(self, data):
         return base64.b64encode(data.encode(self.encoding))
@@ -191,8 +188,6 @@ class SMTP:
 
     def rcpt(self, recv):
         code, reply = self.execute('RCPT TO:<{}>'.format(recv))
-        if code not in [250, 251]:
-            print(code, reply)
         return (code, reply)
 
     def sendmail(self, sender, receivers, mail):
@@ -203,7 +198,8 @@ class SMTP:
             code, reply = self.rcpt(receiver)
             if code not in [250, 251]:
                 recverr[receiver] = (code, reply)
-        self.execute_commands('DATA', (mail, True), '.')
+        if len(recverr) < len(receivers):
+            self.execute_commands('DATA', (mail, True), '.')
         return recverr
 
     def close(self):

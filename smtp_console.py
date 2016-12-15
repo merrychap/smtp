@@ -23,23 +23,31 @@ def run_smtp(mode_data, smtp_server, dis_enc, fromaddr, password, toaddrs,
              data):
     print('[*] Connecting to server...')
     smtp = SMTP(SMTP_SERVERS[smtp_server], dis_enc)
+    smtp.ehlo()
     smtp.auth(fromaddr, password)
-    send_by_mode(mode_data, smtp, fromaddr, toaddrs, data)
-    print('[+] Message were sended')
+    recverr = send_by_mode(mode_data, smtp, fromaddr, toaddrs, data)
+    for name, error in recverr.items():
+        print('[-] Error with {}: {} {}'.format(name, error[0], error[1][:-1]))
+    if (len(recverr) < len(toaddrs)):
+        print('[+] Message were sended')
+    else:
+        print('[-] There are no valid emails')
     smtp.close()
     print('[+] Done')
 
 
 def send_by_mode(mode_data, smtp, fromaddr, toaddrs, data):
+    recverr = {}
     if mode_data[0] == 1:
         for addr in toaddrs:
-            send_email(smtp, fromaddr, [addr], **data)
+            recverr.update(send_email(smtp, fromaddr, [addr], **data))
     elif mode_data[0] == 2:
-        send_email(smtp, fromaddr, toaddrs, **data)
+        return send_email(smtp, fromaddr, toaddrs, **data)
     elif mode_data[0] == 3:
         distr_list = mode_data[1]
         for distr in distr_list:
-            send_email(smtp, fromaddr, distr, **data)
+            recverr.update(send_email(smtp, fromaddr, distr, **data))
+    return recverr
 
 
 def send_email(smtp, fromaddr, toaddrs, subject, msg, attachs):
@@ -48,7 +56,7 @@ def send_email(smtp, fromaddr, toaddrs, subject, msg, attachs):
     email = Email(fromaddr=fromaddr, toaddr=str_toaddrs,
                   subject=subject, message=msg, attachments=attachs)
     print('[*] Sending...')
-    smtp.sendmail(fromaddr, toaddrs, str(email))
+    return smtp.sendmail(fromaddr, toaddrs, str(email))
 
 
 def addrs2str(addrs):
@@ -69,7 +77,10 @@ def attach2archive(attachs):
 
 
 def remove_archive():
-    os.remove(ATTACH_ARCHIVE)
+    try:
+        os.remove(ATTACH_ARCHIVE)
+    except OSError:
+        pass
 
 
 def main():
@@ -81,11 +92,11 @@ def main():
     try:
         if data['archive']:
             data['data']['attachs'] = [attach2archive(data['data']['attachs'])]
-            del data['archive']
+        del data['archive']
         run_smtp(mode_data=mode_data, **data)
     except Exception as e:
-        traceback.print_exc(e)
         print('[-] Exception was occured')
+        print(e)
     finally:
         remove_archive()
 
